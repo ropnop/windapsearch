@@ -115,7 +115,10 @@ class LDAPSession(object):
 
 	def getDefaultNamingContext(self):
 		try:
-			rootDSE = self.con.read_rootdse_s()
+			newCon = ldap.initialize('ldap://{}'.format(self.dc_ip))
+			newCon.simple_bind_s('','')
+			res = newCon.search_s("", ldap.SCOPE_BASE, '(objectClass=*)')
+			rootDSE = res[0][1]
 		except ldap.LDAPError, e:
 			print "[!] Error retrieving the root DSE"
 			print "[!] {}".format(e)
@@ -127,6 +130,7 @@ class LDAPSession(object):
 
 		defaultNamingContext = rootDSE['defaultNamingContext'][0]
 		self.domainBase = defaultNamingContext
+		newCon.unbind()
 		return defaultNamingContext
 
 
