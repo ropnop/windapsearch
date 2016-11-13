@@ -9,7 +9,7 @@ You can always use a tool like `ldapsearch` to perform custom LDAP queries again
 
 ```
 $ git clone https://github.com/ropnop/windapsearch.git
-$ pip install python-ldap
+$ pip install python-ldap #or apt-get install python-ldap
 $ ./windapsearch.py
 ```
 
