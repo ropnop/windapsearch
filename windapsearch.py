@@ -8,6 +8,7 @@ import getpass
 import sys
 import re
 import string
+from datetime import datetime
 
 
 TEXT_CHARACTERS = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
@@ -52,6 +53,17 @@ class LDAPSearchResult(object):
 				if self.isBinary(value):
 					value = value.encode('base64').rstrip()
 				print "{}: {}".format(attr, value)
+	
+	def getCSVLine(self):
+		attrs = self.attrs.keys()
+		lineValues = []
+		for attr in attrs:
+			values = self.get_attr_values(attr)
+			for value in values:
+				if self.isBinary(value):
+					value = value.encode('base64').rstrip()
+				lineValues.append(value)
+		return "\t".join(lineValues)
 
 	def isBinary(self, attr):
 		'''http://stackoverflow.com/questions/1446549/how-to-identify-binary-and-text-files-using-python'''
@@ -375,10 +387,21 @@ def prettyPrintDictionary(results, attrs=None, separator=","):
 				line.append(' ')
 		print separator.join(line)
 
+def writeResults(results, attrs, filename):
+	titleRow = '\t'.join(attrs)
+	with open(filename, 'w') as fd:
+		fd.write(titleRow+'\n')
+		for result in results:
+			fd.write(result.getCSVLine()+'\n')
+	print ("[*] {} written").format(filename)
+		
+	
+
 
 
 def run(args):
 
+	startTime = datetime.now().strftime("%Y%m%d-%T")
 	if not args.username:
 		username = ''
 		password = ''
@@ -403,7 +426,6 @@ def run(args):
 	print "[+]\tFound: " + ldapSession.getDefaultNamingContext()
 
 	print "[+] Attempting bind"
-	#import ipdb; ipdb.set_trace()
 	ldapSession.do_bind()
 
 	if ldapSession.is_binded:
@@ -424,6 +446,9 @@ def run(args):
 			bye(ldapSession)
 		print "[+]\tFound {} groups: \n".format(len(allGroups))
 		prettyPrintResults(allGroups)
+		if args.output_dir:
+			filename = "{}/{}-groups.tsv".format(args.output_dir, startTime)
+			writeResults(allGroups, searchAttrs, filename)
 
 	if args.users:
 		print "\n[+] Enumerating all AD users"
@@ -432,6 +457,9 @@ def run(args):
 			bye(ldapSession)
 		print "[+]\tFound {} users: \n".format(len(allUsers))
 		prettyPrintResults(allUsers)
+		if args.output_dir:
+			filename = "{}/{}-users.tsv".format(args.output_dir, startTime)
+			writeResults(allUsers, searchAttrs, filename)
 
 	if args.computers:
 		print "\n[+] Enumerating all AD computers"
@@ -444,6 +472,9 @@ def run(args):
 		else:
 			allComputersDict = ldapSession.getComputerDict(allComputers, ipLookup=True)
 			prettyPrintDictionary(allComputersDict, attrs=searchAttrs)
+		if args.output_dir:
+			filename = "{}/{}-computers.tsv".format(args.output_dir, startTime)
+			writeResults(allComputers, searchAttrs, filename)
 
 	if args.group_name:
 		if not isValidDN(args.group_name):
@@ -475,6 +506,9 @@ def run(args):
 		domainAdminResults, searchAttrs = ldapSession.getNestedGroupMemberships(daDN, attrs=attrs)
 		print "[+]\tFound {} Domain Admins:\n".format(len(domainAdminResults))
 		prettyPrintResults(domainAdminResults)
+		if args.output_dir:
+			filename = "{}/{}-domainadmins.tsv".format(args.output_dir, startTime)
+			writeResults(domainAdminResults, searchAttrs, filename)
 
 
 	if args.search_term:
@@ -503,6 +537,9 @@ def run(args):
 			attrs = ['*']
 		lookupResults = ldapSession.doCustomSearch(lookupDN, objectFilter="(cn=*)", attrs=attrs)
 		prettyPrintResults(lookupResults)
+		if args.output_dir:
+			filename = "{}/{}-lookup.tsv".format(args.output_dir, startTime)
+			writeResults(lookupResults, searchAttrs, filename)
 
 	bye(ldapSession)
 
@@ -557,7 +594,7 @@ if __name__ == '__main__':
 	ogroup.add_argument("-r", "--resolve", action="store_true", help="Resolve IP addresses for enumerated computer names. Will make DNS queries against system NS")
 	ogroup.add_argument("--attrs", metavar="ATTRS", dest="attrs", type=str, help="Comma separated custom atrribute names to search for (e.g. 'badPwdCount,lastLogon')")
 	ogroup.add_argument("--full", action="store_true", help="Dump all atrributes from LDAP.")
-	#ogroup.add_argument("-O", "--output", metavar="OUTPUT_DIR", dest="output_dir", type=str, help="Save results to CSV files in <OUTPUT_DIR>")
+	ogroup.add_argument("-o", "--output", metavar="OUTPUT_DIR", dest="output_dir", type=str, help="Save results to TSV files in <OUTPUT_DIR>")
 
 
 	if len(sys.argv) == 1:
