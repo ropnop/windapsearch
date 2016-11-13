@@ -99,8 +99,8 @@ class LDAPSession(object):
 
 	def getDC_IP(self, domain):
 		'''
-		if domain is provided, do a _ldap._tcp.domain to try and find DC, or maybe a "host -av domain"
-		if no domain is provided, do a multicast and hope it's in th search domain
+		if domain is provided, do a _ldap._tcp.domain to try and find DC, or maybe a "host -av domain" eventually ?
+		if no domain is provided, do a multicast and hope it's in the search domain
 		if can't find anything, return error and require dc_ip set manually
 		'''
 		import socket
@@ -155,6 +155,38 @@ class LDAPSession(object):
 
 		return current_dn
 
+	def do_ldap_query(self, base_dn, subtree, objectFilter, attrs, page_size=1000):
+		'''
+		actually perform the ldap query, with paging
+		copied from another LDAP search script I found: https://github.com/CroweCybersecurity/ad-ldap-enum
+		found this script well after i'd written most of this one. oh well
+		'''
+		more_pages = True
+
+		ldap_control = ldap.controls.SimplePagedResultsControl(True, size=page_size, cookie='')
+
+		allResults = []
+
+		while more_pages:
+			msgid = self.con.search_ext(base_dn, subtree, objectFilter, attrs, serverctrls=[ldap_control])
+			result_type, rawResults, message_id, server_controls = self.con.result3(msgid)
+
+			allResults += rawResults
+
+			# Get the page control and get the cookie from the control.
+			page_controls = [c for c in server_controls if c.controlType == ldap.controls.SimplePagedResultsControl.controlType]
+
+			if page_controls:
+				cookie = page_controls[0].cookie
+
+			if not cookie:
+				more_pages = False
+			else:
+				ldap_control.cookie = cookie
+
+		return allResults
+
+
 	def get_search_results(self, results):
 		'''takes raw results and returns a list of helper objects'''
 		res = []
@@ -181,7 +213,7 @@ class LDAPSession(object):
 		objectFilter = '(objectCategory=user)'
 		base_dn = self.domainBase
 		try:
-			rawUsers = self.con.search_s(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+			rawUsers = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
 		except LDAPError, e:
 			print "[!] Error retrieving users"
 			print "[!] {}".format(e)
@@ -197,7 +229,7 @@ class LDAPSession(object):
 		objectFilter = '(objectCategory=group)'
 		base_dn = self.domainBase
 		try:
-			rawGroups = self.con.search_s(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+			rawGroups = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
 		except LDAPError, e:
 			print "[!] Error retrieving groups"
 			print "[!] {}".format(e)
@@ -214,7 +246,7 @@ class LDAPSession(object):
 		attrs = ['dn']
 		base_dn = self.domainBase
 		try:
-			rawResults = self.con.search_s(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+			rawResults = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
 		except LDAPError, e:
 			print "[!] Error retrieving results"
 			print "[!] {}".format(e)
@@ -224,7 +256,7 @@ class LDAPSession(object):
 	
 	def doCustomSearch(self, base, objectFilter, attrs):
 		try:
-			rawResults = self.con.search_s(base, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+			rawResults = self.do_ldap_query(base, ldap.SCOPE_SUBTREE, objectFilter, attrs)
 		except LDAPError, e:
 			"print [!] Error doing search"
 			"print [!] {}".format(e)
@@ -274,7 +306,7 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 
 		try:
-			rawComputers = self.con.search_s(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+			rawComputers = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
 		except LDAPError, e:
 			print "[!] Error retrieving computers"
 			print "[!] {}".format(e)
