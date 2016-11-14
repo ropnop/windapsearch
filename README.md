@@ -15,10 +15,11 @@ $ ./windapsearch.py
 
 ## Usage
 ```
-$ ./windapsearch.py -h
+root@kali:~/windapsearch# ./windapsearch.py -h
 usage: windapsearch.py [-h] [-d DOMAIN] [--dc-ip DC_IP] [-u USER]
                        [-p PASSWORD] [-G] [-U] [-C] [-m GROUP_NAME] [--da]
                        [-s SEARCH_TERM] [-l DN] [-r] [--attrs ATTRS] [--full]
+                       [-o OUTPUT_DIR]
 
 Script to perform Windows domain enumeration through LDAP queries to a Domain
 Controller
@@ -66,6 +67,8 @@ Output Options:
   --attrs ATTRS         Comma separated custom atrribute names to search for
                         (e.g. 'badPwdCount,lastLogon')
   --full                Dump all atrributes from LDAP.
+  -o output_dir, --output output_dir
+                        Save results to TSV files in output_dir
 ```
 ### Specifying Domain and Account
 To begin you need to specify a Domain Controller to connect to with `--dc-ip`, or a domain with `-d`.
@@ -79,20 +82,22 @@ The password can be specified on the command line with `-p` or if left out it wi
 ### Enumerate Users
 The `-U` option performs an LDAP search for all entries where `objectCategory=user`. By default, it will only display the commonName and the userPrincipalName.
 The `--attrs` option can be used to specify custom or additional attributes to display, or the `--full` option will display everythin for all users.
+
 WARNING: in a large domain this can get very big, very fast
 
 Example:
 ```
-$ ./windapsearch.py --dc-ip 10.9.122.100 -u jarrieta@cscou.lab -p nastyCutt3r -U
-[+] Using Domain Controller at: 10.9.122.100
+$  ./windapsearch.py -d lab.ropnop.com -u ropnop\\ldapbind -p GoCubs16 -U
+[+] No DC IP provided. Will try to discover via DNS lookup.
+[+] Using Domain Controller at: 172.16.13.10
 [+] Getting defaultNamingContext from Root DSE
-[+]	  Found: DC=cscou,DC=lab
+[+]     Found: DC=lab,DC=ropnop,DC=com
 [+] Attempting bind
-[+]	  ...success! Binded as:
-[+]	  u:CSCOU\jarrieta
+[+]     ...success! Binded as:
+[+]      u:ROPNOP\ldapbind
 
 [+] Enumerating all AD users
-[+]	Found 14 users:
+[+]     Found 2754 users:
 
 cn: Administrator
 
@@ -100,11 +105,12 @@ cn: Guest
 
 cn: krbtgt
 
-cn: Joe Maddon
-userPrincipalName: jmaddon@cscou.lab
+cn: Andy Green
+userPrincipalName: agreen@lab.ropnop.com
 
 <snipped...>
 ```
+To save the results to a tab-separated file, use the `-o` option and specify a directory.
 
 ### Enumerate Groups and Group Memberships
 Use the `-G` option to enumerate all entries where `objectCategory=group`. This will output the DN and CN of all groups.
@@ -113,30 +119,30 @@ To query group membership, use the `-m` option with either the DN or CN of the g
 
 Example:
 ```
-$ ./windapsearch.py --dc-ip 10.9.122.100 -u jarrieta@cscou.lab -p nastyCutt3r -m empl
-[+] Using Domain Controller at: 10.9.122.100
-[+] Getting defaultNamingContext from Root DSE
-[+]	Found: DC=cscou,DC=lab
-[+] Attempting bind
-[+]	...success! Binded as:
-[+]	 u:CSCOU\jarrieta
-[+] Attempting to enumerate full DN for group: empl
-[+]	 Using DN: CN=employees,OU=cscou_groups,DC=cscou,DC=lab
-
-[+]	 Found 10 members:
-
-CN=Jason Heyward,OU=hitters,OU=cscou_users,DC=cscou,DC=lab
-CN=Anthony Rizzo,OU=hitters,OU=cscou_users,DC=cscou,DC=lab
-CN=Kris Bryant,OU=hitters,OU=cscou_users,DC=cscou,DC=lab
-CN=Kyle Schwarber,OU=hitters,OU=cscou_users,DC=cscou,DC=lab
-CN=Hector Rondon,OU=pitchers,OU=cscou_users,DC=cscou,DC=lab
-CN=John Lackey,OU=pitchers,OU=cscou_users,DC=cscou,DC=lab
-CN=Jon Lester,OU=pitchers,OU=cscou_users,DC=cscou,DC=lab
-CN=Jake Arrieta,OU=pitchers,OU=cscou_users,DC=cscou,DC=lab
-CN=Jed Hoyer,OU=managers,OU=cscou_users,DC=cscou,DC=lab
-CN=Joe Maddon,OU=managers,OU=cscou_users,DC=cscou,DC=lab
-
-[*] Bye!
+$ ./windapsearch.py -d lab.ropnop.com -u ropnop\\ldapbind -p GoCubs16 -m IT               
+[+] No DC IP provided. Will try to discover via DNS lookup.                                                       
+[+] Using Domain Controller at: 172.16.13.10                                                                      
+[+] Getting defaultNamingContext from Root DSE                                                                    
+[+]     Found: DC=lab,DC=ropnop,DC=com                                                                            
+[+] Attempting bind                                                                                               
+[+]     ...success! Binded as:                                                                                    
+[+]      u:ROPNOP\ldapbind                                                                                        
+[+] Attempting to enumerate full DN for group: IT                                                                 
+[+] Found 2 results:                                                                                              
+                                                                                                                  
+0: CN=IT Admins,OU=Groups,OU=Lab,DC=lab,DC=ropnop,DC=com                                                          
+1: CN=Ismael Titus,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com                                                  
+                                                                                                                  
+Which DN do you want to use? : 0                                                                                  
+[+]      Found 5 members:                                                                                         
+                                                                                                                  
+CN=James Doyle,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com                                                      
+CN=Edward Sotelo,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com                                                    
+CN=Cheryl Perry,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com                                                     
+CN=Anthony Gordon,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com                                                   
+CN=Desktop Support,OU=Groups,OU=Lab,DC=lab,DC=ropnop,DC=com                                                       
+                                                                                                                  
+[*] Bye!                                                                                                          
 ```
 
 #### Domain Admins
@@ -148,27 +154,30 @@ To do a recursive lookup for Domain Admins, you can use the "--da" option.
 
 Example:
 ```
-$ ./windapsearch.py --dc-ip 10.9.122.100 -u jarrieta@cscou.lab -p nastyCutt3r --da
-[+] Using Domain Controller at: 10.9.122.100
+root@kali:~/windapsearch# ./windapsearch.py -d lab.ropnop.com -u ropnop\\ldapbind -p GoCubs16 --da
+[+] No DC IP provided. Will try to discover via DNS lookup.
+[+] Using Domain Controller at: 172.16.13.10
 [+] Getting defaultNamingContext from Root DSE
-[+]	Found: DC=cscou,DC=lab
+[+]     Found: DC=lab,DC=ropnop,DC=com
 [+] Attempting bind
-[+]	...success! Binded as:
-[+]	 u:CSCOU\jarrieta
+[+]     ...success! Binded as:
+[+]      u:ROPNOP\ldapbind
 [+] Attempting to enumerate all Domain Admins
-[+] Using DN: CN=Domain Admins,CN=Users.CN=Domain Admins,CN=Users,DC=cscou,DC=lab
-[+]	Found 3 Domain Admins:
+[+] Using DN: CN=Domain Admins,CN=Users.CN=Domain Admins,CN=Users,DC=lab,DC=ropnop,DC=com
+[+]     Found 12 Domain Admins:
 
 cn: Administrator
 
-cn: Joe Maddon
-userPrincipalName: jmaddon@cscou.lab
+cn: Andy Green
+userPrincipalName: agreen@lab.ropnop.com
 
-cn: Jed Hoyer
-userPrincipalName: jhoyer@cscou.lab
+cn: Natasha Strong
+userPrincipalName: nstrong@lab.ropnop.com
 
+cn: Linda Alton
+userPrincipalName: lalton@lab.ropnop.com
 
-[*] Bye!
+<snipped...>
 ```
 
 ### Enumerating Computers
@@ -180,42 +189,48 @@ If you specify the `-r` or `--resolve` option, the tool will perform a DNS looku
 
 Example:
 ```
-$ ./windapsearch.py --dc-ip 10.9.122.100 -u jarrieta@cscou.lab -p nastyCutt3r -C -r
-[+] Using Domain Controller at: 10.9.122.100
+$ ./windapsearch.py -d lab.ropnop.com -u ropnop\\ldapbind -p GoCubs16 -C -r
+[+] No DC IP provided. Will try to discover via DNS lookup.
+[+] Using Domain Controller at: 172.16.13.10
 [+] Getting defaultNamingContext from Root DSE
-[+]	Found: DC=cscou,DC=lab
+[+]     Found: DC=lab,DC=ropnop,DC=com
 [+] Attempting bind
-[+]	...success! Binded as:
-[+]	 u:CSCOU\jarrieta
+[+]     ...success! Binded as:
+[+]      u:ROPNOP\ldapbind
 
 [+] Enumerating all AD computers
-[+]	Found 5 computers:
+[+]     Found 4 computers:
 
 cn, IP, dNSHostName, operatingSystem, operatingSystemVersion, operatingSystemServicePack
-DC1,10.9.122.100,DC1.cscou.lab,Windows Server 2012 R2 Standard,6.3 (9600),
-ordws02,10.9.122.9,ordws02.cscou.lab,Windows 8.1 Enterprise,6.3 (9600),
-ORDWS01,10.9.122.5,ordws01.cscou.lab,Windows 7 Enterprise,6.1 (7601),Service Pack 1
-ORDWS04,10.9.122.10,ORDWS04.cscou.lab,Windows 7 Enterprise,6.1 (7601),Service Pack 1
-ORDWS03,10.9.122.7,ordws03.cscou.lab,Windows 10 Pro,10.0 (10240),
+WS03WIN10,172.16.13.53,ws03win10.lab.ropnop.com,Windows 10 Enterprise,10.0 (10240),
+WS02WIN7,172.16.13.50,WS02WIN7.lab.ropnop.com,Windows 7 Enterprise,6.1 (7601),Service Pack 1
+WS01WIN7,172.16.13.52,WS01WIN7.lab.ropnop.com,Windows 7 Enterprise,6.1 (7601),Service Pack 1
+DC01,172.16.13.10,dc01.lab.ropnop.com,Windows Server 2012 R2 Standard,6.3 (9600),
 
-[*] Bye!
+[*] Bye!                               
 ```
 
 ### Custom Searching
 The tool allows for custom, fuzzy matching. You can perform a search and see results (DNs) with the `-s` option:
 
 ```
-$ ./windapsearch.py --dc-ip 10.9.122.100 -u jarrieta@cscou.lab -p nastyCutt3r -s rizzo
-[+] Using Domain Controller at: 10.9.122.100
+$ ./windapsearch.py -d lab.ropnop.com -u ropnop\\ldapbind -p GoCubs16 -s albert
+[+] No DC IP provided. Will try to discover via DNS lookup.
+[+] Using Domain Controller at: 172.16.13.10
 [+] Getting defaultNamingContext from Root DSE
-[+]	Found: DC=cscou,DC=lab
+[+]     Found: DC=lab,DC=ropnop,DC=com
 [+] Attempting bind
-[+]	...success! Binded as:
-[+]	 u:CSCOU\jarrieta
-[+] Doing fuzzy search for: "rizzo"
-[+]	Found 1 results:
+[+]     ...success! Binded as:
+[+]      u:ROPNOP\ldapbind
+[+] Doing fuzzy search for: "albert"
+[+]     Found 6 results:
 
-CN=Anthony Rizzo,OU=hitters,OU=cscou_users,DC=cscou,DC=lab
+CN=Kathi Albert,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+CN=Albert Woodell,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+CN=Albert Lyons,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+CN=Alberta Henshaw,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+CN=Alberta Taylor,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+CN=Alberto Mitchell,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
 
 [*] Bye!
 ```
@@ -223,23 +238,26 @@ CN=Anthony Rizzo,OU=hitters,OU=cscou_users,DC=cscou,DC=lab
 To query the DN and display the attributes, use the lookup option, `-l`. You can provide this with a full DN, or a search term. If the search matches more than one DN, the tool will prompt you for which to use:
 
 ```
-$ ./windapsearch.py --dc-ip 10.9.122.100 -u jarrieta@cscou.lab -p nastyCutt3r -l pitchers --attrs displayName
-[+] Using Domain Controller at: 10.9.122.100
+$ ./windapsearch.py -d lab.ropnop.com -u ropnop\\ldapbind -p GoCubs16 -l albert --attrs telephoneNumber
+[+] No DC IP provided. Will try to discover via DNS lookup.
+[+] Using Domain Controller at: 172.16.13.10
 [+] Getting defaultNamingContext from Root DSE
-[+]	Found: DC=cscou,DC=lab
+[+]     Found: DC=lab,DC=ropnop,DC=com
 [+] Attempting bind
-[+]	...success! Binded as:
-[+]	 u:CSCOU\jarrieta
-[+] Searching for matching DNs for term: "pitchers"
-[+]	 Using DN: OU=pitchers,OU=cscou_users,DC=cscou,DC=lab
+[+]     ...success! Binded as:
+[+]      u:ROPNOP\ldapbind
+[+] Searching for matching DNs for term: "albert"
+[+] Found 6 results:
 
-displayName: Jake Arrieta
+0: CN=Kathi Albert,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+1: CN=Albert Woodell,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+2: CN=Albert Lyons,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+3: CN=Alberta Henshaw,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+4: CN=Alberta Taylor,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
+5: CN=Alberto Mitchell,OU=US,OU=Users,OU=Lab,DC=lab,DC=ropnop,DC=com
 
-displayName: Jon Lester
-
-displayName: John Lackey
-
-displayName: Hector Rondon
+Which DN do you want to use? : 2
+telephoneNumber: 716-825-5021
 
 
 [*] Bye!
@@ -251,6 +269,10 @@ https://labs.mwrinfosecurity.com/blog/active-directory-users-in-nested-groups-re
 
 and their tool to perform offline querying of LDAP:
 https://labs.mwrinfosecurity.com/blog/offline-querying-of-active-directory/
+
+also, after I wrote the majority of this tool I discovered a very similar project here: 
+https://github.com/CroweCybersecurity/ad-ldap-enum
+Definitely check that tool out too!
 
 
 
