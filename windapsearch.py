@@ -572,6 +572,7 @@ def bye(ldapSession):
 
 
 if __name__ == '__main__':
+	
 	parser = argparse.ArgumentParser(add_help = True, description = "Script to perform Windows domain enumeration through LDAP queries to a Domain Controller")
 	dgroup = parser.add_argument_group("Domain Options")
 	dgroup.add_argument("-d", "--domain", metavar="DOMAIN", dest='domain', type=str, help="The FQDN of the domain (e.g. 'lab.example.com'). Only needed if DC-IP not provided")
@@ -594,7 +595,8 @@ if __name__ == '__main__':
 	ogroup.add_argument("-r", "--resolve", action="store_true", help="Resolve IP addresses for enumerated computer names. Will make DNS queries against system NS")
 	ogroup.add_argument("--attrs", metavar="ATTRS", dest="attrs", type=str, help="Comma separated custom atrribute names to search for (e.g. 'badPwdCount,lastLogon')")
 	ogroup.add_argument("--full", action="store_true", help="Dump all atrributes from LDAP.")
-	ogroup.add_argument("-o", "--output", metavar="OUTPUT_DIR", dest="output_dir", type=str, help="Save results to TSV files in <OUTPUT_DIR>")
+	ogroup.add_argument("-o", "--output", metavar="output_dir", dest="output_dir", type=str, help="Save results to TSV files in <OUTPUT_DIR>")
+
 
 
 	if len(sys.argv) == 1:
