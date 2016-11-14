@@ -5,7 +5,7 @@ By default, Windows Domain Controllers support basic LDAP operations through por
 You can always use a tool like `ldapsearch` to perform custom LDAP queries against a Domain Controller. I found myself running different LDAP commands over and over again, and it was difficult to memorize all the custom LDAP queries. So this tool was born to help automate some of the most useful LDAP queries a pentester would want to perform in an AD environment.
 
 ### Requirements
-`windapsearch` requires the `python-ldap` module. You should be able to get up and running qith two commands:
+`windapsearch` requires the `python-ldap` module. You should be able to get up and running with two commands:
 
 ```
 $ git clone https://github.com/ropnop/windapsearch.git
@@ -15,7 +15,7 @@ $ ./windapsearch.py
 
 ## Usage
 ```
-root@kali:~/windapsearch# ./windapsearch.py -h
+$ ./windapsearch.py -h
 usage: windapsearch.py [-h] [-d DOMAIN] [--dc-ip DC_IP] [-u USER]
                        [-p PASSWORD] [-G] [-U] [-C] [-m GROUP_NAME] [--da]
                        [-s SEARCH_TERM] [-l DN] [-r] [--attrs ATTRS] [--full]
@@ -272,7 +272,7 @@ https://labs.mwrinfosecurity.com/blog/offline-querying-of-active-directory/
 
 also, after I wrote the majority of this tool I discovered a very similar project here: 
 https://github.com/CroweCybersecurity/ad-ldap-enum
-Definitely check that tool out too!
+Definitely check that tool out too! I sniped some of the code to get paging working with my tool anyway :)
 
 
 
