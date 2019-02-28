@@ -429,6 +429,19 @@ class LDAPSession(object):
 			sys.exit(1)
 		return (self.get_search_results(rawUnconstrainedComputers), attrs)
 
+	def getGPOs(self, attrs=''):
+		if not attrs:
+			attrs = ['displayName', 'gPCFileSysPath']
+		objectFilter = "objectClass=groupPolicyContainer"
+		base_dn = self.domainBase
+		try:
+			rawGPOs = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+		except LDAPError, e:
+			print "[!] Error retrieving GPOs"
+			print "[!] {}".format(e)
+			sys.exit(1)
+		return (self.get_search_results(rawGPOs), attrs)
+
 
 def prettyPrintResults(results, showDN=False):
 	for result in results:
@@ -630,6 +643,15 @@ def run(args):
 			filename = "{}/{}-unconstrained-computers.tsv".format(args.output_dir, startTime)
 			writeResults(unconstrainedComputerResults, searchAttrs, filename)
 
+	if args.gpos:
+		print "[+] Attempting to enumerate all group policy objects"
+		gpoResults, searchAttrs = ldapSession.getGPOs(attrs=attrs)
+		print "[+]\tFound {} GPOs:\n".format(len(gpoResults))
+		prettyPrintResults(gpoResults)
+		if args.output_dir:
+			filename = "{}/{}-gpos.tsv".format(args.output_dir, startTime)
+			writeResults(gpoResults, searchAttrs, filename)
+
 	if args.search_term:
 		print "[+] Doing fuzzy search for: \"{}\"".format(args.search_term)
 		searchResults = ldapSession.doFuzzySearch(args.search_term)
@@ -712,6 +734,7 @@ if __name__ == '__main__':
 	egroup.add_argument("--user-spns", dest="spns", action="store_true", help="Enumerate all users objects with Service Principal Names (for kerberoasting)")
 	egroup.add_argument("--unconstrained-users", dest="unconstrained_users", action="store_true", help="Enumerate all user objects with unconstrained delegation")
 	egroup.add_argument("--unconstrained-computers", dest="unconstrained_computers", action="store_true", help="Enumerate all computer objects with unconstrained delegation")
+	egroup.add_argument("--gpos", action="store_true", help="Enumerate Group Policy Objects")
 	egroup.add_argument("-s", "--search", metavar="SEARCH_TERM", dest="search_term", type=str, help="Fuzzy search for all matching LDAP entries")
 	egroup.add_argument("-l", "--lookup", metavar="DN", dest="lookup", type=str, help="Search through LDAP and lookup entry. Works with fuzzy search. Defaults to printing all attributes, but honors '--attrs'")
 
