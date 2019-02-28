@@ -14,6 +14,17 @@ from datetime import datetime
 TEXT_CHARACTERS = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
 _NULL_TRANS = string.maketrans("", "")
 
+FUNCTIONALITYLEVELS = {
+	"0": "2000",
+	"1": "2003 Interim",
+	"2": "2003",
+	"3": "2008",
+	"4": "2008 R2",
+	"5": "2012",
+	"6": "2012 R2",
+	"7": "2016"
+}
+
 class LDAPSearchResult(object):
 	"""A helper class to work with raw search results
 	Copied from here: https://www.packtpub.com/books/content/configuring-and-securing-python-ldap-applications-part-2
@@ -217,6 +228,19 @@ class LDAPSession(object):
 
 		return res
 
+	def getFunctionalityLevel(self):
+		objectFilter = '(objectclass=*)'
+		attrs = ['domainFunctionality', 'forestFunctionality', 'domainControllerFunctionality']
+		try:
+			# rawFunctionality = self.do_ldap_query('', ldap.SCOPE_BASE, objectFilter, attrs)
+			rawData = self.con.search_s('', ldap.SCOPE_BASE, "(objectclass=*)", attrs)
+			functionalityLevels = rawData[0][1]
+		except Error, e:
+			print "[!] Error retrieving functionality level"
+			print "[!] {}".format(e)
+			sys.exit(1)
+
+		return functionalityLevels
 
 	def getAllUsers(self, attrs=''):
 		if not attrs:
@@ -396,7 +420,9 @@ def writeResults(results, attrs, filename):
 	print ("[*] {} written").format(filename)
 		
 	
-
+def printFunctionalityLevels(levels):
+	for name, level in levels.items():
+		print "[+]\t {}: {}".format(name, FUNCTIONALITYLEVELS[level[0]])
 
 
 def run(args):
@@ -431,6 +457,11 @@ def run(args):
 	if ldapSession.is_binded:
 		print "[+]\t...success! Binded as: "
 		print "[+]\t {}".format(ldapSession.whoami())
+
+	if args.functionality:
+		levels = ldapSession.getFunctionalityLevel()
+		print "[+] Functionality Levels:"
+		printFunctionalityLevels(levels)
 
 	attrs = ''
 	
@@ -583,6 +614,7 @@ if __name__ == '__main__':
 	bgroup.add_argument("-p", "--password", metavar="PASSWORD", dest="password", type=str, help="Password to use. If not specified, will be prompted for")
 
 	egroup = parser.add_argument_group("Enumeration Options", "Data to enumerate from LDAP")
+	egroup.add_argument("--functionality", action="store_true", help="Enumerate Domain Functionality level. Possible through anonymous bind")
 	egroup.add_argument("-G", "--groups", action="store_true", help="Enumerate all AD Groups")
 	egroup.add_argument("-U", "--users", action="store_true", help="Enumerate all AD Users")
 	egroup.add_argument("-C", "--computers", action="store_true", help="Enumerate all AD Computers")
