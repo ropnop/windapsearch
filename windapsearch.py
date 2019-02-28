@@ -403,6 +403,32 @@ class LDAPSession(object):
 			sys.exit(1)
 		return (self.get_search_results(rawSpnResults), attrs)
 
+	def getUnconstrainedUsers(self, attrs=''):
+		if not attrs:
+			attrs = ['dn', 'userPrincipalName']
+		objectFilter = "(&(&(objectCategory=person)(objectClass=user))(userAccountControl:1.2.840.113556.1.4.803:=524288))"
+		base_dn = self.domainBase
+		try:
+			rawUnconstrainedUsers = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+		except LDAPError, e:
+			print "[!] Error retrieving unconstrained users"
+			print "[!] {}".format(e)
+			sys.exit(1)
+		return (self.get_search_results(rawUnconstrainedUsers), attrs)
+
+	def getUnconstrainedComputers(self, attrs=''):
+		if not attrs:
+			attrs = ['dn', 'dNSHostName']
+		objectFilter = "(&(objectCategory=computer)(objectClass=computer)(userAccountControl:1.2.840.113556.1.4.803:=524288))"
+		base_dn = self.domainBase
+		try:
+			rawUnconstrainedComputers = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+		except LDAPError, e:
+			print "[!] Error retrieving unconstrained computers"
+			print "[!] {}".format(e)
+			sys.exit(1)
+		return (self.get_search_results(rawUnconstrainedComputers), attrs)
+
 
 def prettyPrintResults(results, showDN=False):
 	for result in results:
@@ -585,6 +611,24 @@ def run(args):
 		if args.output_dir:
 			filename = "{}/{}-spns.tsv".format(args.output_dir, startTime)
 			writeResults(spnResults, searchAttrs, filename)
+	
+	if args.unconstrained_users:
+		print "[+] Attempting to enumerate all user objects with unconstrained delegation"
+		unconstrainedUserResults, searchAttrs = ldapSession.getUnconstrainedUsers(attrs=attrs)
+		print "[+]\tFound {} Users with unconstrained delegation:\n".format(len(unconstrainedUserResults))
+		prettyPrintResults(unconstrainedUserResults, showDN=True)
+		if args.output_dir:
+			filename = "{}/{}-unconstrained-users.tsv".format(args.output_dir, startTime)
+			writeResults(unconstrainedUserResults, searchAttrs, filename)
+
+	if args.unconstrained_computers:
+		print "[+] Attempting to enumerate all computer objects with unconstrained delegation"
+		unconstrainedComputerResults, searchAttrs = ldapSession.getUnconstrainedComputers(attrs=attrs)
+		print "[+]\tFound {} computers with unconstrained delegation:\n".format(len(unconstrainedComputerResults))
+		prettyPrintResults(unconstrainedComputerResults, showDN=True)
+		if args.output_dir:
+			filename = "{}/{}-unconstrained-computers.tsv".format(args.output_dir, startTime)
+			writeResults(unconstrainedComputerResults, searchAttrs, filename)
 
 	if args.search_term:
 		print "[+] Doing fuzzy search for: \"{}\"".format(args.search_term)
@@ -666,6 +710,8 @@ if __name__ == '__main__':
 	egroup.add_argument("--da", action="store_true", help="Shortcut for enumerate all members of group 'Domain Admins'. Performs recursive lookups for nested members.")
 	egroup.add_argument("--admin-objects", dest="admin_objects", action="store_true", help="Enumerate all objects with protected ACLs (i.e. admins)")
 	egroup.add_argument("--user-spns", dest="spns", action="store_true", help="Enumerate all users objects with Service Principal Names (for kerberoasting)")
+	egroup.add_argument("--unconstrained-users", dest="unconstrained_users", action="store_true", help="Enumerate all user objects with unconstrained delegation")
+	egroup.add_argument("--unconstrained-computers", dest="unconstrained_computers", action="store_true", help="Enumerate all computer objects with unconstrained delegation")
 	egroup.add_argument("-s", "--search", metavar="SEARCH_TERM", dest="search_term", type=str, help="Fuzzy search for all matching LDAP entries")
 	egroup.add_argument("-l", "--lookup", metavar="DN", dest="lookup", type=str, help="Search through LDAP and lookup entry. Works with fuzzy search. Defaults to printing all attributes, but honors '--attrs'")
 
