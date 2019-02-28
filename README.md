@@ -15,11 +15,14 @@ $ ./windapsearch.py
 
 ## Usage
 ```
-$ ./windapsearch.py -h
+$ python2 windapsearch.py -h
 usage: windapsearch.py [-h] [-d DOMAIN] [--dc-ip DC_IP] [-u USER]
-                       [-p PASSWORD] [-G] [-U] [-C] [-m GROUP_NAME] [--da]
-                       [-s SEARCH_TERM] [-l DN] [-r] [--attrs ATTRS] [--full]
-                       [-o OUTPUT_DIR]
+                       [-p PASSWORD] [--functionality] [-G] [-U] [-C]
+                       [-m GROUP_NAME] [--da] [--admin-objects] [--user-spns]
+                       [--unconstrained-users] [--unconstrained-computers]
+                       [--gpos] [-s SEARCH_TERM] [-l DN]
+                       [--custom CUSTOM_FILTER] [-r] [--attrs ATTRS] [--full]
+                       [-o output_dir]
 
 Script to perform Windows domain enumeration through LDAP queries to a Domain
 Controller
@@ -45,6 +48,8 @@ Bind Options:
 Enumeration Options:
   Data to enumerate from LDAP
 
+  --functionality       Enumerate Domain Functionality level. Possible through
+                        anonymous bind
   -G, --groups          Enumerate all AD Groups
   -U, --users           Enumerate all AD Users
   -C, --computers       Enumerate all AD Computers
@@ -53,11 +58,25 @@ Enumeration Options:
   --da                  Shortcut for enumerate all members of group 'Domain
                         Admins'. Performs recursive lookups for nested
                         members.
+  --admin-objects       Enumerate all objects with protected ACLs (i.e.
+                        admins)
+  --user-spns           Enumerate all users objects with Service Principal
+                        Names (for kerberoasting)
+  --unconstrained-users
+                        Enumerate all user objects with unconstrained
+                        delegation
+  --unconstrained-computers
+                        Enumerate all computer objects with unconstrained
+                        delegation
+  --gpos                Enumerate Group Policy Objects
   -s SEARCH_TERM, --search SEARCH_TERM
                         Fuzzy search for all matching LDAP entries
   -l DN, --lookup DN    Search through LDAP and lookup entry. Works with fuzzy
                         search. Defaults to printing all attributes, but
                         honors '--attrs'
+  --custom CUSTOM_FILTER
+                        Perform a search with a custom object filter. Must be
+                        valid LDAP filter syntax
 
 Output Options:
   Display and output options for results
@@ -68,7 +87,8 @@ Output Options:
                         (e.g. 'badPwdCount,lastLogon')
   --full                Dump all atrributes from LDAP.
   -o output_dir, --output output_dir
-                        Save results to TSV files in output_dir
+                        Save results to TSV files in <OUTPUT_DIR>
+
 ```
 ### Specifying Domain and Account
 To begin you need to specify a Domain Controller to connect to with `--dc-ip`, or a domain with `-d`.
@@ -273,6 +293,9 @@ https://labs.mwrinfosecurity.com/blog/offline-querying-of-active-directory/
 also, after I wrote the majority of this tool I discovered a very similar project here: 
 https://github.com/CroweCybersecurity/ad-ldap-enum
 Definitely check that tool out too! I sniped some of the code to get paging working with my tool anyway :)
+
+For some more LDAP searching goodness, check out this Microsoft article on other AD queries you can perform (hint: use the `--custom` flag)
+https://social.technet.microsoft.com/wiki/contents/articles/5392.active-directory-ldap-syntax-filters.aspx
 
 
 
