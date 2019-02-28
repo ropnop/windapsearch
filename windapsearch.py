@@ -450,6 +450,10 @@ def run(args):
 
 	print "[+] Getting defaultNamingContext from Root DSE"
 	print "[+]\tFound: " + ldapSession.getDefaultNamingContext()
+	if args.functionality:
+		levels = ldapSession.getFunctionalityLevel()
+		print "[+] Functionality Levels:"
+		printFunctionalityLevels(levels)
 
 	print "[+] Attempting bind"
 	ldapSession.do_bind()
@@ -457,11 +461,6 @@ def run(args):
 	if ldapSession.is_binded:
 		print "[+]\t...success! Binded as: "
 		print "[+]\t {}".format(ldapSession.whoami())
-
-	if args.functionality:
-		levels = ldapSession.getFunctionalityLevel()
-		print "[+] Functionality Levels:"
-		printFunctionalityLevels(levels)
 
 	attrs = ''
 	
