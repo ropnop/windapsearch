@@ -377,9 +377,24 @@ class LDAPSession(object):
 
 		return computersDict
 
+	def getAdminObjects(self, attrs=''):
+		if not attrs:
+			attrs = ['dn']
+		objectFilter = 'adminCount=1'
+		base_dn = self.domainBase
+		try:
+			rawAdminResults = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+		except LDAPError, e:
+			print "[!] Error retrieving admin objects"
+			print "[!] {}".format(e)
+			sys.exit(1)
+		return (self.get_search_results(rawAdminResults), attrs)
 
-def prettyPrintResults(results):
+
+def prettyPrintResults(results, showDN=False):
 	for result in results:
+		if showDN:
+			print result.dn
 		result.pretty_print()
 		print ""
 
@@ -540,6 +555,14 @@ def run(args):
 			filename = "{}/{}-domainadmins.tsv".format(args.output_dir, startTime)
 			writeResults(domainAdminResults, searchAttrs, filename)
 
+	if args.admin_objects:
+		print "[+] Attempting to enumerate all admin (protected) objects"
+		adminResults, searchAttrs = ldapSession.getAdminObjects(attrs=attrs)
+		print "[+]\tFound {} Admin Objects:\n".format(len(adminResults))
+		prettyPrintResults(adminResults, showDN=True)
+		if args.output_dir:
+			filename = "{}/{}-adminobjects.tsv".format(args.output_dir, startTime)
+			writeResults(adminResults, searchAttrs, filename)
 
 	if args.search_term:
 		print "[+] Doing fuzzy search for: \"{}\"".format(args.search_term)
@@ -619,6 +642,7 @@ if __name__ == '__main__':
 	egroup.add_argument("-C", "--computers", action="store_true", help="Enumerate all AD Computers")
 	egroup.add_argument("-m", "--members", metavar="GROUP_NAME", dest="group_name", type=str, help="Enumerate all members of a group")
 	egroup.add_argument("--da", action="store_true", help="Shortcut for enumerate all members of group 'Domain Admins'. Performs recursive lookups for nested members.")
+	egroup.add_argument("--admin-objects", dest="admin_objects", action="store_true", help="Enumerate all objects with protected ACLs (i.e. admins)")
 	egroup.add_argument("-s", "--search", metavar="SEARCH_TERM", dest="search_term", type=str, help="Fuzzy search for all matching LDAP entries")
 	egroup.add_argument("-l", "--lookup", metavar="DN", dest="lookup", type=str, help="Search through LDAP and lookup entry. Works with fuzzy search. Defaults to printing all attributes, but honors '--attrs'")
 
