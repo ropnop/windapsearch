@@ -390,6 +390,19 @@ class LDAPSession(object):
 			sys.exit(1)
 		return (self.get_search_results(rawAdminResults), attrs)
 
+	def getSPNs(self, attrs=''):
+		if not attrs:
+			attrs = ['dn']
+		objectFilter= "(&(&(servicePrincipalName=*)(UserAccountControl:1.2.840.113556.1.4.803:=512))(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))"
+		base_dn = self.domainBase
+		try:
+			rawSpnResults = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+		except LDAPError, e:
+			print "[!] Error retrieving SPNs"
+			print "[!] {}".format(e)
+			sys.exit(1)
+		return (self.get_search_results(rawSpnResults), attrs)
+
 
 def prettyPrintResults(results, showDN=False):
 	for result in results:
@@ -564,6 +577,15 @@ def run(args):
 			filename = "{}/{}-adminobjects.tsv".format(args.output_dir, startTime)
 			writeResults(adminResults, searchAttrs, filename)
 
+	if args.spns:
+		print "[+] Attempting to enumerate all User objects with SPNs"
+		spnResults, searchAttrs = ldapSession.getSPNs(attrs=attrs)
+		print "[+]\tFound {} Users with SPNs:\n".format(len(spnResults))
+		prettyPrintResults(spnResults, showDN=True)
+		if args.output_dir:
+			filename = "{}/{}-spns.tsv".format(args.output_dir, startTime)
+			writeResults(spnResults, searchAttrs, filename)
+
 	if args.search_term:
 		print "[+] Doing fuzzy search for: \"{}\"".format(args.search_term)
 		searchResults = ldapSession.doFuzzySearch(args.search_term)
@@ -643,6 +665,7 @@ if __name__ == '__main__':
 	egroup.add_argument("-m", "--members", metavar="GROUP_NAME", dest="group_name", type=str, help="Enumerate all members of a group")
 	egroup.add_argument("--da", action="store_true", help="Shortcut for enumerate all members of group 'Domain Admins'. Performs recursive lookups for nested members.")
 	egroup.add_argument("--admin-objects", dest="admin_objects", action="store_true", help="Enumerate all objects with protected ACLs (i.e. admins)")
+	egroup.add_argument("--user-spns", dest="spns", action="store_true", help="Enumerate all users objects with Service Principal Names (for kerberoasting)")
 	egroup.add_argument("-s", "--search", metavar="SEARCH_TERM", dest="search_term", type=str, help="Fuzzy search for all matching LDAP entries")
 	egroup.add_argument("-l", "--lookup", metavar="DN", dest="lookup", type=str, help="Search through LDAP and lookup entry. Works with fuzzy search. Defaults to printing all attributes, but honors '--attrs'")
 
