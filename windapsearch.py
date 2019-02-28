@@ -442,6 +442,19 @@ class LDAPSession(object):
 			sys.exit(1)
 		return (self.get_search_results(rawGPOs), attrs)
 
+	def doCustomFilterSearch(self, customFilter, attrs=''):
+		if not attrs:
+			attrs = ['dn']
+		objectFilter = customFilter
+		base_dn = self.domainBase
+		try:
+			rawResults = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+		except LDAPError, e:
+			print "[!] Error retrieving results with custom filter"
+			print "[!] {}".format(e)
+			sys.exit(1)
+		return (self.get_search_results(rawResults), attrs)
+
 
 def prettyPrintResults(results, showDN=False):
 	for result in results:
@@ -652,6 +665,15 @@ def run(args):
 			filename = "{}/{}-gpos.tsv".format(args.output_dir, startTime)
 			writeResults(gpoResults, searchAttrs, filename)
 
+	if args.custom_filter:
+		print "[+] Performing custom lookup with filter: \"{}\"".format(args.custom_filter)
+		customResults, searchAttrs = ldapSession.doCustomFilterSearch(args.custom_filter, attrs=attrs)
+		print "[+]\tFound {} results:\n".format(len(customResults))
+		prettyPrintResults(customResults, showDN=True)
+		if args.output_dir:
+			filename = "{}/{}-custom.tsv".format(args.output_dir, startTime)
+			writeResults(customResults, searchAttrs, filename)
+
 	if args.search_term:
 		print "[+] Doing fuzzy search for: \"{}\"".format(args.search_term)
 		searchResults = ldapSession.doFuzzySearch(args.search_term)
@@ -737,6 +759,7 @@ if __name__ == '__main__':
 	egroup.add_argument("--gpos", action="store_true", help="Enumerate Group Policy Objects")
 	egroup.add_argument("-s", "--search", metavar="SEARCH_TERM", dest="search_term", type=str, help="Fuzzy search for all matching LDAP entries")
 	egroup.add_argument("-l", "--lookup", metavar="DN", dest="lookup", type=str, help="Search through LDAP and lookup entry. Works with fuzzy search. Defaults to printing all attributes, but honors '--attrs'")
+	egroup.add_argument("--custom", dest="custom_filter", help="Perform a search with a custom object filter. Must be valid LDAP filter syntax")
 
 	ogroup = parser.add_argument_group("Output Options", "Display and output options for results")
 	ogroup.add_argument("-r", "--resolve", action="store_true", help="Resolve IP addresses for enumerated computer names. Will make DNS queries against system NS")
