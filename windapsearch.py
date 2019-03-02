@@ -507,7 +507,7 @@ def printFunctionalityLevels(levels):
 
 def run(args):
 
-	startTime = datetime.now().strftime("%Y%m%d-%T")
+	startTime = datetime.now().strftime("%Y%m%d-%H:%M:%S")
 	if not args.username:
 		username = ''
 		password = ''
