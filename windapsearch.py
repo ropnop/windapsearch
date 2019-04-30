@@ -25,21 +25,15 @@ FUNCTIONALITYLEVELS = {
 	"7": "2016"
 }
 
-PROTECTED_GROUPS = {
-    "Account Operators",
-    "Backup Operators",
-    "Print Operators",
-    "Server Operators",
-    "Administrators",
-    "Domain Admins",
-    "Schema Admins",
-    "Enterprise Admins",
-    "Enterprise Key Admins",
-    "Key Admins",
-    "Domain Controllers",
-    "Read-only Domain Controllers",
-    "Replicator"
-}
+# Privileged builtin AD groups relevant to look for 
+BUILTIN_PRIVILEGED_GROUPS = [
+	"Administrators",		#Builtin administrators group for the domain
+	"Domain Admins",		# ''
+	"Enterprise Admins",	# ''
+	"Schema Admins",		#Highly privileged builtin group
+	"Account Operators",	# ''
+	"Backup Operators"		# ''
+]
 
 class LDAPSearchResult(object):
 	"""A helper class to work with raw search results
@@ -589,7 +583,7 @@ def run(args):
 
 	if args.privileged_users:
 		print "[+] Attempting to enumerate all AD privileged users"
-		for group in PROTECTED_GROUPS:
+		for group in BUILTIN_PRIVILEGED_GROUPS:
 			daDN = "CN={},CN=Users,{}".format(group,ldapSession.domainBase)
 			print "[+] Using DN: {}".format(daDN)
 			domainAdminResults, searchAttrs = ldapSession.getNestedGroupMemberships(daDN, attrs=attrs)
