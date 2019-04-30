@@ -27,12 +27,12 @@ FUNCTIONALITYLEVELS = {
 
 # Privileged builtin AD groups relevant to look for 
 BUILTIN_PRIVILEGED_GROUPS = [
-	"Administrators",		#Builtin administrators group for the domain
-	"Domain Admins",		# ''
-	"Enterprise Admins",	# ''
-	"Schema Admins",		#Highly privileged builtin group
-	"Account Operators",	# ''
-	"Backup Operators"		# ''
+	"Administrators",      #Builtin administrators group for the domain
+	"Domain Admins",       # ''
+	"Enterprise Admins",   # ''
+	"Schema Admins",       #Highly privileged builtin group
+	"Account Operators",   # ''
+	"Backup Operators"     # ''
 ]
 
 class LDAPSearchResult(object):
