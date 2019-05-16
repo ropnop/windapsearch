@@ -25,6 +25,16 @@ FUNCTIONALITYLEVELS = {
 	"7": "2016"
 }
 
+# Privileged builtin AD groups relevant to look for 
+BUILTIN_PRIVILEGED_GROUPS = [
+	"Administrators",      #Builtin administrators group for the domain
+	"Domain Admins",       # ''
+	"Enterprise Admins",   # ''
+	"Schema Admins",       #Highly privileged builtin group
+	"Account Operators",   # ''
+	"Backup Operators"     # ''
+]
+
 class LDAPSearchResult(object):
 	"""A helper class to work with raw search results
 	Copied from here: https://www.packtpub.com/books/content/configuring-and-securing-python-ldap-applications-part-2
@@ -571,6 +581,18 @@ def run(args):
 			filename = "{}/{}-users.tsv".format(args.output_dir, startTime)
 			writeResults(allUsers, searchAttrs, filename)
 
+	if args.privileged_users:
+		print "[+] Attempting to enumerate all AD privileged users"
+		for group in BUILTIN_PRIVILEGED_GROUPS:
+			daDN = "CN={},CN=Users,{}".format(group,ldapSession.domainBase)
+			print "[+] Using DN: {}".format(daDN)
+			domainAdminResults, searchAttrs = ldapSession.getNestedGroupMemberships(daDN, attrs=attrs)
+			print "[+]\tFound {} nested users for group {}:\n".format(len(domainAdminResults),group)
+			prettyPrintResults(domainAdminResults)
+			if args.output_dir:
+				filename = "{}/{}-{}-users.tsv".format(args.output_dir, startTime, group.replace(" ","_"))
+				writeResults(domainAdminResults, searchAttrs, filename)
+
 	if args.computers:
 		print "\n[+] Enumerating all AD computers"
 		allComputers, searchAttrs = ldapSession.getAllComputers(attrs=attrs)
@@ -749,6 +771,7 @@ if __name__ == '__main__':
 	egroup.add_argument("--functionality", action="store_true", help="Enumerate Domain Functionality level. Possible through anonymous bind")
 	egroup.add_argument("-G", "--groups", action="store_true", help="Enumerate all AD Groups")
 	egroup.add_argument("-U", "--users", action="store_true", help="Enumerate all AD Users")
+	egroup.add_argument("-PU", "--privileged-users", dest="privileged_users", action="store_true", help="Enumerate All privileged AD Users. Performs recursive lookups for nested members.")
 	egroup.add_argument("-C", "--computers", action="store_true", help="Enumerate all AD Computers")
 	egroup.add_argument("-m", "--members", metavar="GROUP_NAME", dest="group_name", type=str, help="Enumerate all members of a group")
 	egroup.add_argument("--da", action="store_true", help="Shortcut for enumerate all members of group 'Domain Admins'. Performs recursive lookups for nested members.")
