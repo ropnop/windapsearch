@@ -52,6 +52,9 @@ Enumeration Options:
                         anonymous bind
   -G, --groups          Enumerate all AD Groups
   -U, --users           Enumerate all AD Users
+  -PU, --privileged-users
+                        Enumerate All privileged AD Users. Performs recursive
+                        lookups for nested members.
   -C, --computers       Enumerate all AD Computers
   -m GROUP_NAME, --members GROUP_NAME
                         Enumerate all members of a group
