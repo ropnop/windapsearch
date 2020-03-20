@@ -7,17 +7,12 @@ import argparse
 import getpass
 import sys
 import re
-#import string
-import binascii
+import string
 from datetime import datetime
 
-try:
-    maketrans = ''.maketrans
-except AttributeError:
-    from string import maketrans
 
-TEXT_CHARACTERS = "".join(list(map(chr, list(range(32, 127)))) + list("\n\r\t\b"))
-_NULL_TRANS = maketrans("", "")
+TEXT_CHARACTERS = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
+_NULL_TRANS = string.maketrans("", "")
 
 FUNCTIONALITYLEVELS = {
 	"0": "2000",
@@ -50,7 +45,7 @@ class LDAPSearchResult(object):
 	def __init__(self, entry_tuple):
 		(dn, attrs) = entry_tuple
 		if dn:
-			self.dn = dn
+			self.dn = dn 
 		else:
 			return
 
@@ -60,33 +55,28 @@ class LDAPSearchResult(object):
 		return self.attrs
 
 	def has_attribute(self, attr_name):
-		return attr_name in self.attrs
+		return self.attrs.has_key(attr_name)
 
 	def get_attr_values(self, key):
 		return self.attrs[key]
 
 	def get_attr_names(self):
-		return list(self.attrs.keys())
+		return self.attrs.keys()
 
 	def get_dn(self):
-		return self.dn
+		return self.dn 
 
 	def pretty_print(self):
-		attrs = list(self.attrs.keys())
+		attrs = self.attrs.keys()
 		for attr in attrs:
 			values = self.get_attr_values(attr)
 			for value in values:
-				#print(value)
-				if not isinstance(value, str):
-					try:
-						value = value.decode()
-					except:
-						value =  binascii.b2a_hex(value).decode()
-						#value = value.encode('base64').rstrip()
-				print("{}: {}".format(attr, value))
-
+				if self.isBinary(value):
+					value = value.encode('base64').rstrip()
+				print "{}: {}".format(attr, value)
+	
 	def getCSVLine(self):
-		attrs = list(self.attrs.keys())
+		attrs = self.attrs.keys()
 		lineValues = []
 		for attr in attrs:
 			values = self.get_attr_values(attr)
@@ -100,9 +90,8 @@ class LDAPSearchResult(object):
 		'''http://stackoverflow.com/questions/1446549/how-to-identify-binary-and-text-files-using-python'''
 		if not attr:
 			return False
-		return True
-		#if "\0" in attr:
-		#	return True
+		if "\0" in attr:
+			return True
 		t = attr.translate(_NULL_TRANS, TEXT_CHARACTERS)
 		if float(len(t))/float(len(attr)) > 0.30:
 			return True
@@ -151,7 +140,7 @@ class LDAPSession(object):
 		try:
 			dc_ip = socket.gethostbyname(domain)
 		except:
-			print("[!] Unable to locate domain controller IP through host lookup. Please provide manually")
+			print "[!] Unable to locate domain controller IP through host lookup. Please provide manually"
 			sys.exit(1)
 
 		self.dc_ip = dc_ip
@@ -163,13 +152,13 @@ class LDAPSession(object):
 			newCon.simple_bind_s('','')
 			res = newCon.search_s("", ldap.SCOPE_BASE, '(objectClass=*)')
 			rootDSE = res[0][1]
-		except ldap.LDAPError as e:
-			print("[!] Error retrieving the root DSE")
-			print("[!] {}".format(e))
+		except ldap.LDAPError, e:
+			print "[!] Error retrieving the root DSE"
+			print "[!] {}".format(e)
 			sys.exit(1)
 
-		if 'defaultNamingContext' not in rootDSE:
-			print("[!] No defaultNamingContext found!")
+		if not rootDSE.has_key('defaultNamingContext'):
+			print "[!] No defaultNamingContext found!"
 			sys.exit(1)
 
 		defaultNamingContext = rootDSE['defaultNamingContext'][0]
@@ -184,17 +173,17 @@ class LDAPSession(object):
 			self.is_binded = True
 			return True
 		except ldap.INVALID_CREDENTIALS:
-			print("[!] Error: invalid credentials")
+			print "[!] Error: invalid credentials"
 			sys.exit(1)
-		except ldap.LDAPError as e:
-			print("[!] {}".format(e))
+		except ldap.LDAPError, e:
+			print "[!] {}".format(e)
 			sys.exit(1)
 
 	def whoami(self):
 		try:
 			current_dn = self.con.whoami_s()
-		except ldap.LDAPError as e:
-			print("[!] {}".format(e))
+		except ldap.LDAPError, e:
+			print "[!] {}".format(e)
 			sys.exit(1)
 
 		return current_dn
@@ -206,14 +195,12 @@ class LDAPSession(object):
 		found this script well after i'd written most of this one. oh well
 		'''
 		more_pages = True
+
 		ldap_control = ldap.controls.SimplePagedResultsControl(True, size=page_size, cookie='')
 
 		allResults = []
 
 		while more_pages:
-			#print(base_dn)
-			if not isinstance(base_dn, str):
-				base_dn = base_dn.decode()
 			msgid = self.con.search_ext(base_dn, subtree, objectFilter, attrs, serverctrls=[ldap_control])
 			result_type, rawResults, message_id, server_controls = self.con.result3(msgid)
 
@@ -258,9 +245,9 @@ class LDAPSession(object):
 			# rawFunctionality = self.do_ldap_query('', ldap.SCOPE_BASE, objectFilter, attrs)
 			rawData = self.con.search_s('', ldap.SCOPE_BASE, "(objectclass=*)", attrs)
 			functionalityLevels = rawData[0][1]
-		except Error as e:
-			print("[!] Error retrieving functionality level")
-			print("[!] {}".format(e))
+		except Error, e:
+			print "[!] Error retrieving functionality level"
+			print "[!] {}".format(e)
 			sys.exit(1)
 
 		return functionalityLevels
@@ -273,9 +260,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawUsers = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving users")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving users"
+			print "[!] {}".format(e)
 			sys.exit(1)
 
 		return (self.get_search_results(rawUsers), attrs)
@@ -289,9 +276,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawGroups = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving groups")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving groups"
+			print "[!] {}".format(e)
 			sys.exit(1)
 
 		return (self.get_search_results(rawGroups), attrs)
@@ -306,9 +293,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawResults = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving results")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving results"
+			print "[!] {}".format(e)
 			sys.exit(1)
 		return self.get_search_results(rawResults)
 
@@ -316,7 +303,7 @@ class LDAPSession(object):
 	def doCustomSearch(self, base, objectFilter, attrs):
 		try:
 			rawResults = self.do_ldap_query(base, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
+		except LDAPError, e:
 			"print [!] Error doing search"
 			"print [!] {}".format(e)
 			sys.exit(1)
@@ -366,9 +353,9 @@ class LDAPSession(object):
 
 		try:
 			rawComputers = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving computers")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving computers"
+			print "[!] {}".format(e)
 			sys.exit(1)
 
 		return (self.get_search_results(rawComputers), attrs)
@@ -386,7 +373,7 @@ class LDAPSession(object):
 			for attr in computer.get_attr_names():
 				computerInfo[attr] = ','.join(computer.get_attr_values(attr))
 
-			if 'dNSHostName' in computerInfo:
+			if computerInfo.has_key('dNSHostName'):
 				hostname = computerInfo['dNSHostName']
 			else:
 				hostname = computerInfo['cn']+self.domain
@@ -407,9 +394,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawAdminResults = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving admin objects")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving admin objects"
+			print "[!] {}".format(e)
 			sys.exit(1)
 		return (self.get_search_results(rawAdminResults), attrs)
 
@@ -420,9 +407,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawSpnResults = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving SPNs")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving SPNs"
+			print "[!] {}".format(e)
 			sys.exit(1)
 		return (self.get_search_results(rawSpnResults), attrs)
 
@@ -433,9 +420,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawUnconstrainedUsers = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving unconstrained users")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving unconstrained users"
+			print "[!] {}".format(e)
 			sys.exit(1)
 		return (self.get_search_results(rawUnconstrainedUsers), attrs)
 
@@ -446,9 +433,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawUnconstrainedComputers = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving unconstrained computers")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving unconstrained computers"
+			print "[!] {}".format(e)
 			sys.exit(1)
 		return (self.get_search_results(rawUnconstrainedComputers), attrs)
 
@@ -459,9 +446,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawGPOs = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving GPOs")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving GPOs"
+			print "[!] {}".format(e)
 			sys.exit(1)
 		return (self.get_search_results(rawGPOs), attrs)
 
@@ -472,9 +459,9 @@ class LDAPSession(object):
 		base_dn = self.domainBase
 		try:
 			rawResults = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
-		except LDAPError as e:
-			print("[!] Error retrieving results with custom filter")
-			print("[!] {}".format(e))
+		except LDAPError, e:
+			print "[!] Error retrieving results with custom filter"
+			print "[!] {}".format(e)
 			sys.exit(1)
 		return (self.get_search_results(rawResults), attrs)
 
@@ -482,9 +469,9 @@ class LDAPSession(object):
 def prettyPrintResults(results, showDN=False):
 	for result in results:
 		if showDN:
-			print(result.dn)
+			print result.dn
 		result.pretty_print()
-		print("")
+		print ""
 
 
 def prettyPrintDictionary(results, attrs=None, separator=","):
@@ -493,7 +480,7 @@ def prettyPrintDictionary(results, attrs=None, separator=","):
 	common_attrs = ['cn', 'IP', 'dNSHostName', 'userPrincipalName', 'operatingSystem', 'operatingSystemVersion', 'operatingSystemServicePack']
 	attrs = []
 
-	for dn, computer in results.items():
+	for dn, computer in results.iteritems():
 		for key in computer:
 			keys.add(key)
 
@@ -503,16 +490,16 @@ def prettyPrintDictionary(results, attrs=None, separator=","):
 			keys.remove(attr)
 	for attr in keys:
 		attrs.append(attr)
-	print(", ".join(attrs))
+	print ", ".join(attrs)
 
-	for dn, computer in results.items():
+	for dn, computer in results.iteritems():
 		line = []
 		for attr in attrs:
-			if attr in computer:
+			if computer.has_key(attr):
 				line.append(computer[attr])
 			else:
 				line.append(' ')
-		print(separator.join(line))
+		print separator.join(line)
 
 def writeResults(results, attrs, filename):
 	titleRow = '\t'.join(attrs)
@@ -520,12 +507,12 @@ def writeResults(results, attrs, filename):
 		fd.write(titleRow+'\n')
 		for result in results:
 			fd.write(result.getCSVLine()+'\n')
-	print(("[*] {} written").format(filename))
+	print ("[*] {} written").format(filename)
 		
 	
 def printFunctionalityLevels(levels):
-	for name, level in list(levels.items()):
-		print("[+]\t {}: {}".format(name, FUNCTIONALITYLEVELS[level[0]]))
+	for name, level in levels.items():
+		print "[+]\t {}: {}".format(name, FUNCTIONALITYLEVELS[level[0]])
 
 
 def run(args):
@@ -534,7 +521,7 @@ def run(args):
 	if not args.username:
 		username = ''
 		password = ''
-		print("[+] No username provided. Will try anonymous bind.")
+		print "[+] No username provided. Will try anonymous bind."
 	else:
 		username = args.username
 
@@ -544,26 +531,26 @@ def run(args):
 		password = args.password
 
 	if not args.dc_ip:
-		print("[+] No DC IP provided. Will try to discover via DNS lookup.")
+		print "[+] No DC IP provided. Will try to discover via DNS lookup."
 
 	ldapSession = LDAPSession(dc_ip=args.dc_ip, username=username, password=password, domain=args.domain)
 
 	
-	print("[+] Using Domain Controller at: {}".format(ldapSession.dc_ip))
+	print "[+] Using Domain Controller at: {}".format(ldapSession.dc_ip)
 
-	print("[+] Getting defaultNamingContext from Root DSE")
-	print("[+]\tFound: {}".format(ldapSession.getDefaultNamingContext()))
+	print "[+] Getting defaultNamingContext from Root DSE"
+	print "[+]\tFound: " + ldapSession.getDefaultNamingContext()
 	if args.functionality:
 		levels = ldapSession.getFunctionalityLevel()
-		print("[+] Functionality Levels:")
+		print "[+] Functionality Levels:"
 		printFunctionalityLevels(levels)
 
-	print("[+] Attempting bind")
+	print "[+] Attempting bind"
 	ldapSession.do_bind()
 
 	if ldapSession.is_binded:
-		print("[+]\t...success! Binded as: ")
-		print("[+]\t {}".format(ldapSession.whoami()))
+		print "[+]\t...success! Binded as: "
+		print "[+]\t {}".format(ldapSession.whoami())
 
 	attrs = ''
 	
@@ -573,45 +560,45 @@ def run(args):
 		attrs = args.attrs.split(',')
 
 	if args.groups:
-		print("\n[+] Enumerating all AD groups")
+		print "\n[+] Enumerating all AD groups"
 		allGroups, searchAttrs = ldapSession.getAllGroups(attrs=attrs)
 		if not allGroups:
 			bye(ldapSession)
-		print("[+]\tFound {} groups: \n".format(len(allGroups)))
+		print "[+]\tFound {} groups: \n".format(len(allGroups))
 		prettyPrintResults(allGroups)
 		if args.output_dir:
 			filename = "{}/{}-groups.tsv".format(args.output_dir, startTime)
 			writeResults(allGroups, searchAttrs, filename)
 
 	if args.users:
-		print("\n[+] Enumerating all AD users")
+		print "\n[+] Enumerating all AD users"
 		allUsers, searchAttrs = ldapSession.getAllUsers(attrs=attrs)
 		if not allUsers:
 			bye(ldapSession)
-		print("[+]\tFound {} users: \n".format(len(allUsers)))
+		print "[+]\tFound {} users: \n".format(len(allUsers))
 		prettyPrintResults(allUsers)
 		if args.output_dir:
 			filename = "{}/{}-users.tsv".format(args.output_dir, startTime)
 			writeResults(allUsers, searchAttrs, filename)
 
 	if args.privileged_users:
-		print("[+] Attempting to enumerate all AD privileged users")
+		print "[+] Attempting to enumerate all AD privileged users"
 		for group in BUILTIN_PRIVILEGED_GROUPS:
 			daDN = "CN={},CN=Users,{}".format(group,ldapSession.domainBase)
-			print("[+] Using DN: {}".format(daDN))
+			print "[+] Using DN: {}".format(daDN)
 			domainAdminResults, searchAttrs = ldapSession.getNestedGroupMemberships(daDN, attrs=attrs)
-			print("[+]\tFound {} nested users for group {}:\n".format(len(domainAdminResults),group))
+			print "[+]\tFound {} nested users for group {}:\n".format(len(domainAdminResults),group)
 			prettyPrintResults(domainAdminResults)
 			if args.output_dir:
 				filename = "{}/{}-{}-users.tsv".format(args.output_dir, startTime, group.replace(" ","_"))
 				writeResults(domainAdminResults, searchAttrs, filename)
 
 	if args.computers:
-		print("\n[+] Enumerating all AD computers")
+		print "\n[+] Enumerating all AD computers"
 		allComputers, searchAttrs = ldapSession.getAllComputers(attrs=attrs)
 		if not allComputers:
 			bye(ldapSession)
-		print("[+]\tFound {} computers: \n".format(len(allComputers)))
+		print "[+]\tFound {} computers: \n".format(len(allComputers))
 		if not args.resolve:
 			prettyPrintResults(allComputers)
 		else:
@@ -623,114 +610,114 @@ def run(args):
 
 	if args.group_name:
 		if not isValidDN(args.group_name):
-			print("[+] Attempting to enumerate full DN for group: {}".format(args.group_name))
+			print "[+] Attempting to enumerate full DN for group: {}".format(args.group_name)
 			searchResults = ldapSession.doFuzzySearch(args.group_name)
 			if not searchResults:
-				print("[!] Couldn't find any DNs matching {}".format(args.group_name))
+				print "[!] Couldn't find any DNs matching {}".format(args.group_name)
 				bye(ldapSession)
 			elif len(searchResults) == 1:
 				groupDN = searchResults[0].dn
-				print("[+]\t Using DN: {}\n".format(groupDN))
+				print "[+]\t Using DN: {}\n".format(groupDN)
 			elif len(searchResults) > 1:
 				groupDN = selectResult(searchResults).dn
 		else:
 			groupDN = args.group_name
-			print("[+]\t Using DN: {}\n".format(groupDN))
+			print "[+]\t Using DN: {}\n".format(groupDN)
 
 		groupMembers = ldapSession.queryGroupMembership(groupDN)
 		if not groupMembers:
-			print("[!] Found 0 results")
+			print "[!] Found 0 results"
 		else:
-			print("[+]\t Found {} members:\n".format(len(groupMembers)))
-			for member in groupMembers: print(member)
+			print "[+]\t Found {} members:\n".format(len(groupMembers))
+			for member in groupMembers: print member
 
 	if args.da:
-		print("[+] Attempting to enumerate all Domain Admins")
+		print "[+] Attempting to enumerate all Domain Admins"
 		daDN = "CN=Domain Admins,CN=Users,{}".format(ldapSession.domainBase)
-		print("[+] Using DN: CN=Domain Admins,CN=Users.{}".format(daDN))
+		print "[+] Using DN: CN=Domain Admins,CN=Users.{}".format(daDN)
 		domainAdminResults, searchAttrs = ldapSession.getNestedGroupMemberships(daDN, attrs=attrs)
-		print("[+]\tFound {} Domain Admins:\n".format(len(domainAdminResults)))
+		print "[+]\tFound {} Domain Admins:\n".format(len(domainAdminResults))
 		prettyPrintResults(domainAdminResults)
 		if args.output_dir:
 			filename = "{}/{}-domainadmins.tsv".format(args.output_dir, startTime)
 			writeResults(domainAdminResults, searchAttrs, filename)
 
 	if args.admin_objects:
-		print("[+] Attempting to enumerate all admin (protected) objects")
+		print "[+] Attempting to enumerate all admin (protected) objects"
 		adminResults, searchAttrs = ldapSession.getAdminObjects(attrs=attrs)
-		print("[+]\tFound {} Admin Objects:\n".format(len(adminResults)))
+		print "[+]\tFound {} Admin Objects:\n".format(len(adminResults))
 		prettyPrintResults(adminResults, showDN=True)
 		if args.output_dir:
 			filename = "{}/{}-adminobjects.tsv".format(args.output_dir, startTime)
 			writeResults(adminResults, searchAttrs, filename)
 
 	if args.spns:
-		print("[+] Attempting to enumerate all User objects with SPNs")
+		print "[+] Attempting to enumerate all User objects with SPNs"
 		spnResults, searchAttrs = ldapSession.getSPNs(attrs=attrs)
-		print("[+]\tFound {} Users with SPNs:\n".format(len(spnResults)))
+		print "[+]\tFound {} Users with SPNs:\n".format(len(spnResults))
 		prettyPrintResults(spnResults, showDN=True)
 		if args.output_dir:
 			filename = "{}/{}-spns.tsv".format(args.output_dir, startTime)
 			writeResults(spnResults, searchAttrs, filename)
 	
 	if args.unconstrained_users:
-		print("[+] Attempting to enumerate all user objects with unconstrained delegation")
+		print "[+] Attempting to enumerate all user objects with unconstrained delegation"
 		unconstrainedUserResults, searchAttrs = ldapSession.getUnconstrainedUsers(attrs=attrs)
-		print("[+]\tFound {} Users with unconstrained delegation:\n".format(len(unconstrainedUserResults)))
+		print "[+]\tFound {} Users with unconstrained delegation:\n".format(len(unconstrainedUserResults))
 		prettyPrintResults(unconstrainedUserResults, showDN=True)
 		if args.output_dir:
 			filename = "{}/{}-unconstrained-users.tsv".format(args.output_dir, startTime)
 			writeResults(unconstrainedUserResults, searchAttrs, filename)
 
 	if args.unconstrained_computers:
-		print("[+] Attempting to enumerate all computer objects with unconstrained delegation")
+		print "[+] Attempting to enumerate all computer objects with unconstrained delegation"
 		unconstrainedComputerResults, searchAttrs = ldapSession.getUnconstrainedComputers(attrs=attrs)
-		print("[+]\tFound {} computers with unconstrained delegation:\n".format(len(unconstrainedComputerResults)))
+		print "[+]\tFound {} computers with unconstrained delegation:\n".format(len(unconstrainedComputerResults))
 		prettyPrintResults(unconstrainedComputerResults, showDN=True)
 		if args.output_dir:
 			filename = "{}/{}-unconstrained-computers.tsv".format(args.output_dir, startTime)
 			writeResults(unconstrainedComputerResults, searchAttrs, filename)
 
 	if args.gpos:
-		print("[+] Attempting to enumerate all group policy objects")
+		print "[+] Attempting to enumerate all group policy objects"
 		gpoResults, searchAttrs = ldapSession.getGPOs(attrs=attrs)
-		print("[+]\tFound {} GPOs:\n".format(len(gpoResults)))
+		print "[+]\tFound {} GPOs:\n".format(len(gpoResults))
 		prettyPrintResults(gpoResults)
 		if args.output_dir:
 			filename = "{}/{}-gpos.tsv".format(args.output_dir, startTime)
 			writeResults(gpoResults, searchAttrs, filename)
 
 	if args.custom_filter:
-		print("[+] Performing custom lookup with filter: \"{}\"".format(args.custom_filter))
+		print "[+] Performing custom lookup with filter: \"{}\"".format(args.custom_filter)
 		customResults, searchAttrs = ldapSession.doCustomFilterSearch(args.custom_filter, attrs=attrs)
-		print("[+]\tFound {} results:\n".format(len(customResults)))
+		print "[+]\tFound {} results:\n".format(len(customResults))
 		prettyPrintResults(customResults, showDN=True)
 		if args.output_dir:
 			filename = "{}/{}-custom.tsv".format(args.output_dir, startTime)
 			writeResults(customResults, searchAttrs, filename)
 
 	if args.search_term:
-		print("[+] Doing fuzzy search for: \"{}\"".format(args.search_term))
+		print "[+] Doing fuzzy search for: \"{}\"".format(args.search_term)
 		searchResults = ldapSession.doFuzzySearch(args.search_term)
-		print("[+]\tFound {} results:\n".format(len(searchResults)))
+		print "[+]\tFound {} results:\n".format(len(searchResults))
 		for result in searchResults:
-			print(result.dn)
+			print result.dn
 
 	if args.lookup:
 		if not isValidDN(args.lookup):
-			print("[+] Searching for matching DNs for term: \"{}\"".format(args.lookup))
+			print "[+] Searching for matching DNs for term: \"{}\"".format(args.lookup)
 			searchResults = ldapSession.doFuzzySearch(args.lookup)
 			if not searchResults:
-				print("[!] Couldn't find any DNs matching: \"{}\"".format(args.lookup))
+				print "[!] Couldn't find any DNs matching: \"{}\"".format(args.lookup)
 				bye(ldapSession)
 			elif len(searchResults) == 1:
 				lookupDN = searchResults[0].dn
-				print("[+]\t Using DN: {}\n".format(lookupDN))
+				print "[+]\t Using DN: {}\n".format(lookupDN)
 			elif len(searchResults) > 1:
 				lookupDN = selectResult(searchResults).dn
 		else:
 			lookupDN = args.lookup
-			print("[+]\t Using DN: {}\n".format(lookupDN))
+			print "[+]\t Using DN: {}\n".format(lookupDN)
 		if not attrs:
 			attrs = ['*']
 		lookupResults = ldapSession.doCustomSearch(lookupDN, objectFilter="(cn=*)", attrs=attrs)
@@ -753,17 +740,17 @@ def isValidDN(testdn):
 
 
 def selectResult(results):
-	print("[+] Found {} results:\n".format(len(results)))
+	print "[+] Found {} results:\n".format(len(results))
 	for number, result in enumerate(results):
-		print("{}: {}".format(number, result.dn))
-	print("")
-	response = input("Which DN do you want to use? : ")
+		print "{}: {}".format(number, result.dn)
+	print ""
+	response = raw_input("Which DN do you want to use? : ")
 	return results[int(response)]
 
 	
 def bye(ldapSession):
 	ldapSession.unbind()
-	print("\n[*] Bye!")
+	print "\n[*] Bye!"
 	sys.exit(1)
 
 
@@ -812,7 +799,7 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	if not (args.domain or args.dc_ip):
-		print("[!] You must specify either a domain or the IP address of a domain controller")
+		print "[!] You must specify either a domain or the IP address of a domain controller"
 		sys.exit(1)
 
 	run(args)
