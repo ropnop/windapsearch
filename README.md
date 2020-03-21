@@ -12,10 +12,11 @@ $ git clone https://github.com/ropnop/windapsearch.git
 $ pip install python-ldap #or apt-get install python-ldap
 $ ./windapsearch.py
 ```
+The latest version is designed to be used with Python 3, but if you are stuck with Python 2, you can use the `windapsearch_py2.py` script.
 
 ## Usage
 ```
-$ python2 windapsearch.py -h
+$ python windapsearch.py -h
 usage: windapsearch.py [-h] [-d DOMAIN] [--dc-ip DC_IP] [-u USER]
                        [-p PASSWORD] [--functionality] [-G] [-U] [-C]
                        [-m GROUP_NAME] [--da] [--admin-objects] [--user-spns]
