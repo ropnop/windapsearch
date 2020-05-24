@@ -1,3 +1,7 @@
+Check out the new and improved `windapsearch` - rewritten in Go with some new features (including JSON support)!
+
+https://github.com/ropnop/go-windapsearch
+
 # windapsearch
 `windapsearch` is a Python script to help enumerate users, groups and computers from a Windows domain through LDAP queries. 
 By default, Windows Domain Controllers support basic LDAP operations through port 389/tcp. With any valid domain account (regardless of privileges), it is possible to perform LDAP queries against a domain controller for any AD related information.
