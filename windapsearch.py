@@ -529,7 +529,10 @@ def run(args):
         password = ''
         print("[+] No username provided. Will try anonymous bind.")
     else:
-        username = args.username
+        if not '\\' in args.username:
+            username = args.domain + '\\' + args.username
+        else:
+            username = args.username
 
     if args.username and not args.password:
         password = getpass.getpass("Password for {}: ".format(args.username))
