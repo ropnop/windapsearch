@@ -333,6 +333,20 @@ class LDAPSession(object):
 
         return self.get_search_results(rawResults)
 
+    def queryUserGroups(self, userCN, attrs=''):
+        objectFilter = "(&(objectclass=*)(cn={}))".format(userCN)
+        if not attrs:
+            attrs = ['cn', 'memberof']
+        base_dn = self.domainBase
+        try:
+            rawGroups = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+        except ldap.LDAPError as e:
+            print("[!] Error retrieving {} groups").format(userCN)
+            print("[!] {}".format(e))
+            sys.exit(1)
+
+        return self.get_search_results(rawGroups), attrs
+    
     def queryGroupMembership(self, groupDN, getUPNs=False):
         objectFilter = '(objectCategory=group)'
         attrs = ['member']
@@ -639,6 +653,18 @@ def run(args):
             filename = "{}/{}-computers.tsv".format(args.output_dir, startTime)
             writeResults(allComputers, searchAttrs, filename)
 
+    if args.user_groups:
+        userCN = args.user_groups
+        print("\n[+] Enumerating {} user groups".format(args.user_groups))
+        userGroups, searchResults = ldapSession.queryUserGroups(args.user_groups)
+        if not userGroups:
+            bye(ldapSession)
+        print("[+]\t Found {} groups: \n".format(len(userGroups)))
+        prettyPrintResults(userGroups)
+        if args.output_dir:
+            filename ="{}/{}-usergroups.tsv".format(args.output_dir, startTime)
+            writeResults(userGroups, searchResults, filename)
+    
     if args.group_name:
         if not isValidDN(args.group_name):
             print("[+] Attempting to enumerate full DN for group: {}".format(args.group_name))
@@ -807,6 +833,7 @@ if __name__ == '__main__':
     egroup.add_argument("-G", "--groups", action="store_true", help="Enumerate all AD Groups")
     egroup.add_argument("-U", "--users", action="store_true", help="Enumerate all AD Users")
     egroup.add_argument("-OU", "--ous", action="store_true", help="Enumerate all AD OUs")
+    egroup.add_argument("-g", "--usergroups", metavar="USER_NAME", dest="user_groups", type=str, help="Enumerate all groups for user")
     egroup.add_argument("-PU", "--privileged-users", dest="privileged_users", action="store_true",
                         help="Enumerate All privileged AD Users. Performs recursive lookups for nested members.")
     egroup.add_argument("-C", "--computers", action="store_true", help="Enumerate all AD Computers")
