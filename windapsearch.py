@@ -278,6 +278,21 @@ class LDAPSession(object):
 
         return self.get_search_results(rawUsers), attrs
 
+    def getAllOUs(self, attrs=''):
+        if not attrs:
+            attrs = ['ou', 'OrganizationalUnit', 'distinguishedname', 'gPlink']
+
+        objectFilter = '(objectClass=OrganizationalUnit)'
+        base_dn = self.domainBase
+        try:
+            rawOUs = self.do_ldap_query(base_dn, ldap.SCOPE_SUBTREE, objectFilter, attrs)
+        except ldap.LDAPError as e:
+            print("[!] Error retrieving OUs")
+            print("[!] {}".format(e))
+            sys.exit(1)
+
+        return self.get_search_results(rawOUs), attrs
+    
     def getAllGroups(self, attrs=''):
         if not attrs:
             attrs = ['distinguishedName', 'cn']
@@ -575,6 +590,17 @@ def run(args):
             filename = "{}/{}-groups.tsv".format(args.output_dir, startTime)
             writeResults(allGroups, searchAttrs, filename)
 
+    if args.ous:
+        print("\n[+] Enumerating all AD OUs")
+        allOUs, searchAttrs = ldapSession.getAllOUs(attrs=attrs)
+        if not allOUs:
+            bye(ldapSession)
+        print("[+]\tFound {} OUs: \n".format(len(allOUs)))
+        prettyPrintResults(allOUs)
+        if args.output_dir:
+            filename ="{}/{}-ous.tsv".format(args.output_dir, startTime)
+            writeResults(allOUs, searchAttrs, filename)
+    
     if args.users:
         print("\n[+] Enumerating all AD users")
         allUsers, searchAttrs = ldapSession.getAllUsers(attrs=attrs)
@@ -780,6 +806,7 @@ if __name__ == '__main__':
                         help="Enumerate Domain Functionality level. Possible through anonymous bind")
     egroup.add_argument("-G", "--groups", action="store_true", help="Enumerate all AD Groups")
     egroup.add_argument("-U", "--users", action="store_true", help="Enumerate all AD Users")
+    egroup.add_argument("-OU", "--ous", action="store_true", help="Enumerate all AD OUs")
     egroup.add_argument("-PU", "--privileged-users", dest="privileged_users", action="store_true",
                         help="Enumerate All privileged AD Users. Performs recursive lookups for nested members.")
     egroup.add_argument("-C", "--computers", action="store_true", help="Enumerate all AD Computers")
