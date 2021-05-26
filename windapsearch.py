@@ -32,6 +32,8 @@ DOMAIN_ADMIN_GROUPS = [
     "Domain-Admins",
     "Domänen Administratoren",
     "Domänen-Administratoren",
+    "Администраторы домена",
+    "Администраторы-домена",
 ]
 
 # Privileged builtin AD groups relevant to look for
