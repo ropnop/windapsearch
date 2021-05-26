@@ -379,7 +379,7 @@ class LDAPSession(object):
             computerInfo = {}
             dn = computer.dn
             for attr in computer.get_attr_names():
-                computerInfo[attr] = ','.join(computer.get_attr_values(attr))
+                computerInfo[attr] = ','.join([val.decode() for val in computer.get_attr_values(attr)])
 
             if 'dNSHostName' in computerInfo:
                 hostname = computerInfo['dNSHostName']
@@ -489,7 +489,7 @@ def prettyPrintDictionary(results, attrs=None, separator=","):
                     'operatingSystemServicePack']
     attrs = []
 
-    for dn, computer in results.iteritems():
+    for dn, computer in results.items():
         for key in computer:
             keys.add(key)
 
